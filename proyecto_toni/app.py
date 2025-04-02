@@ -4,63 +4,70 @@ import mediapipe as mp
 import websockets
 import json
 
+# Inicializar MediaPipe Hands
 mp_hands = mp.solutions.hands
-mp_drawing = mp.solutions.drawing_utils
 hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
 
+# Abrir cámara
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FPS, 30)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-async def send_hand_data(websocket):
+async def send_hand_data(websocket, path):  # ✅ IMPORTANTE: debe recibir 'websocket' y 'path'
     print("🟢 Cliente conectado")
     try:
         while cap.isOpened():
             success, frame = cap.read()
             if not success:
-                break
+                continue
 
+            # Procesar imagen
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = hands.process(frame_rgb)
 
-            move_x = move_y = rotation_x = rotation_y = zoom_distance = None
+            hand_data = []
+            thumb_positions = []
 
             if results.multi_hand_landmarks:
                 for hand_landmarks in results.multi_hand_landmarks:
-                    thumb_tip = hand_landmarks.landmark[4]
-                    index_tip = hand_landmarks.landmark[8]
-                    pinky_tip = hand_landmarks.landmark[20]
+                    for idx, landmark in enumerate(hand_landmarks.landmark):
+                        hand_data.append({
+                            "id": idx,
+                            "x": landmark.x,
+                            "y": landmark.y
+                        })
+                        if idx == 4:  # pulgar
+                            thumb_positions.append((landmark.x, landmark.y))
 
-                    if abs(thumb_tip.x - pinky_tip.x) < 0.05:
-                        move_x, move_y = thumb_tip.x - 0.5, thumb_tip.y - 0.5
+            # Si hay 2 pulgares, calcular distancia para zoom
+            zoom_distance = None
+            if len(thumb_positions) == 2:
+                x1, y1 = thumb_positions[0]
+                x2, y2 = thumb_positions[1]
+                zoom_distance = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
 
-                    if abs(thumb_tip.x - index_tip.x) < 0.05:
-                        rotation_x, rotation_y = index_tip.x - thumb_tip.x, index_tip.y - thumb_tip.y
-
+            # Enviar por WebSocket
             await websocket.send(json.dumps({
-                "move_x": move_x,
-                "move_y": move_y,
-                "rotation_x": rotation_x,
-                "rotation_y": rotation_y,
+                "hands": hand_data,
                 "zoom_distance": zoom_distance
             }))
 
-            for hand_landmarks in results.multi_hand_landmarks:
-                mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+            await asyncio.sleep(1 / 30)  # ~30 FPS
 
-            cv2.imshow("Detección de Manos", frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-    except websockets.exceptions.ConnectionClosedError:
-        print("🔴 Cliente desconectado.")
+    except websockets.exceptions.ConnectionClosed:
+        print("🔴 Cliente desconectado")
     finally:
         cap.release()
         cv2.destroyAllWindows()
 
 async def main():
-    print("🔵 Servidor WebSocket corriendo en ws://localhost:5000")
-    async with websockets.serve(send_hand_data, "0.0.0.0", 5000):
-        await asyncio.Future()
+    print("🔵 Servidor WebSocket en ws://localhost:5050")
+    async with websockets.serve(send_hand_data, "localhost", 5050):  # ✅ Ya no dará error
+        await asyncio.Future()  # Mantener servidor corriendo
 
-asyncio.run(main())
+# Ejecutar
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("🛑 Servidor detenido")
+        cap.release()
+        cv2.destroyAllWindows()
