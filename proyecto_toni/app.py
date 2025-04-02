@@ -14,18 +14,17 @@ cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
 async def send_hand_data(websocket):
-    """Función para enviar datos de gestos detectados al WebSocket"""
     print("🟢 Cliente conectado")
     try:
         while cap.isOpened():
             success, frame = cap.read()
             if not success:
-                break  
+                break
 
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = hands.process(frame_rgb)
 
-            move_x, move_y, rotation_x, rotation_y, zoom_distance = None, None, None, None, None
+            move_x = move_y = rotation_x = rotation_y = zoom_distance = None
 
             if results.multi_hand_landmarks:
                 for hand_landmarks in results.multi_hand_landmarks:
@@ -53,7 +52,6 @@ async def send_hand_data(websocket):
             cv2.imshow("Detección de Manos", frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-
     except websockets.exceptions.ConnectionClosedError:
         print("🔴 Cliente desconectado.")
     finally:
@@ -61,9 +59,8 @@ async def send_hand_data(websocket):
         cv2.destroyAllWindows()
 
 async def main():
-    """Función principal que inicia el servidor WebSocket"""
-    print("🔵 Servidor WebSocket en ws://localhost:5000")
-    async with websockets.serve(send_hand_data, "0.0.0.0", 5000):  
+    print("🔵 Servidor WebSocket corriendo en ws://localhost:5000")
+    async with websockets.serve(send_hand_data, "0.0.0.0", 5000):
         await asyncio.Future()
 
-asyncio.run(main())  # ✅ Corrección: Ejecutamos main() en vez de send_hand_data
+asyncio.run(main())

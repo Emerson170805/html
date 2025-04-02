@@ -1,150 +1,98 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manipulación de Modelo 3D con Gestos y HDRI</title>
-
-    <!-- Three.js y Extensiones -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/RGBELoader.js"></script>
-
-    <style>
-        body { margin: 0; overflow: hidden; }
-        canvas { display: block; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Modelo 3D con Gestos</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/RGBELoader.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
 </head>
 <body>
-    <script>
-        let scene, camera, renderer, model;
-        let ws = new WebSocket("ws://localhost:5000");
-        let pinchDetected = false;
-        let lastX = null, lastY = null;
-        let baseZoomDistance = null;
+  <script>
+    let scene, camera, renderer, model;
+    let ws = new WebSocket("ws://localhost:5000");
+    let pinchDetected = false;
+    let lastX = null, lastY = null;
+    let baseZoomDistance = null;
 
-        function init() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 0, 5);
+    function init() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 0, 5);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.shadowMap.enabled = true;
-            document.body.appendChild(renderer.domElement);
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.shadowMap.enabled = true;
+      document.body.appendChild(renderer.domElement);
 
-            addLights();
-            loadHDRI();
-            loadModel();
-            animate();
-        }
+      const light = new THREE.AmbientLight(0xffffff, 2);
+      scene.add(light);
 
-        function addLights() {
-            // Luz ambiental para iluminar suavemente el modelo
-            const ambientLight = new THREE.AmbientLight(0xffffff, 2);
-            scene.add(ambientLight);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
+      directionalLight.position.set(5, 10, 5);
+      scene.add(directionalLight);
 
-            // Luz direccional para generar sombras y profundidad
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
-            directionalLight.position.set(5, 10, 5);
-            directionalLight.castShadow = true;
-            scene.add(directionalLight);
+      const fillLight = new THREE.PointLight(0xffffff, 2);
+      fillLight.position.set(-5, 5, -5);
+      scene.add(fillLight);
 
-            // Luz de relleno para evitar sombras demasiado duras
-            const fillLight = new THREE.PointLight(0xffffff, 2);
-            fillLight.position.set(-5, 5, -5);
-            scene.add(fillLight);
-        }
+      const rgbeLoader = new THREE.RGBELoader();
+      rgbeLoader.load('https://threejs.org/examples/textures/equirectangular/royal_esplanade_1k.hdr', function(texture) {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        scene.environment = texture;
+        scene.background = texture;
+      });
 
-        function loadHDRI() {
-            const rgbeLoader = new THREE.RGBELoader();
-            rgbeLoader.load('https://threejs.org/examples/textures/equirectangular/royal_esplanade_1k.hdr', (texture) => {
-                texture.mapping = THREE.EquirectangularReflectionMapping;
-                scene.environment = texture;
-                scene.background = texture; // Si quieres un fondo HDRI realista
-            });
-        }
+      const loader = new THREE.GLTFLoader();
+      loader.load("tonicolor.glb", (gltf) => {
+        model = gltf.scene;
+        model.position.set(0, -1, 0);
+        model.scale.set(1, 1, 1);
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.material.roughness = 0.2;
+            child.material.metalness = 0.8;
+            child.material.envMapIntensity = 2;
+          }
+        });
+        scene.add(model);
+      });
 
-        function loadModel() {
-            const gltfLoader = new THREE.GLTFLoader();
-            gltfLoader.load(
-                "tonicolor.glb",
-                (gltf) => {
-                    model = gltf.scene;
-                    model.position.set(0, -1, 0);
-                    model.scale.set(1, 1, 1);
+      animate();
+    }
 
-                    // Aplicar materiales PBR para mejor realismo
-                    model.traverse((child) => {
-                        if (child.isMesh) {
-                            child.material.roughness = 0.2; // Suaviza reflejos
-                            child.material.metalness = 0.8; // Agrega efecto metálico
-                            child.material.envMapIntensity = 2; // Intensidad del HDRI
-                        }
-                    });
+    function animate() {
+      requestAnimationFrame(animate);
+      if (model && pinchDetected) {
+        let deltaX = lastX ? lastX - pinchDetected.x : 0;
+        let deltaY = lastY ? lastY - pinchDetected.y : 0;
+        model.rotation.y += deltaX * 5;
+        model.rotation.x += deltaY * 5;
+        lastX = pinchDetected.x;
+        lastY = pinchDetected.y;
+      }
+      renderer.render(scene, camera);
+    }
 
-                    scene.add(model);
-                    console.log("✅ Modelo cargado correctamente.");
-                },
-                (xhr) => console.log(`🔄 Cargando modelo: ${(xhr.loaded / xhr.total) * 100}%`),
-                (error) => console.error("❌ Error al cargar el modelo:", error)
-            );
-        }
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.zoom_distance && model) {
+        if (!baseZoomDistance) baseZoomDistance = data.zoom_distance;
+        let factor = data.zoom_distance / baseZoomDistance;
+        model.scale.set(factor, factor, factor);
+      }
+    };
 
-        function animate() {
-            requestAnimationFrame(animate);
+    ws.onopen = () => console.log("🟢 WebSocket conectado");
+    ws.onerror = (e) => console.error("🔴 Error WebSocket", e);
+    ws.onclose = () => console.log("🔴 WebSocket cerrado");
 
-            if (model) {
-                if (pinchDetected) {
-                    let deltaX = lastX ? lastX - pinchDetected.x : 0;
-                    let deltaY = lastY ? lastY - pinchDetected.y : 0;
-
-                    model.rotation.y += deltaX * 5;
-                    model.rotation.x += deltaY * 5;
-
-                    lastX = pinchDetected.x;
-                    lastY = pinchDetected.y;
-                }
-            }
-
-            renderer.render(scene, camera);
-        }
-
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-
-            if (data.hands) {
-                let indexTip, thumbTip;
-
-                data.hands.forEach(point => {
-                    if (point.id === 4) thumbTip = point;
-                    if (point.id === 8) indexTip = point;
-                });
-
-                if (thumbTip && indexTip) {
-                    let distance = Math.sqrt(
-                        Math.pow(thumbTip.x - indexTip.x, 2) +
-                        Math.pow(thumbTip.y - indexTip.y, 2)
-                    );
-                    pinchDetected = distance < 0.05 ? { x: indexTip.x, y: indexTip.y } : false;
-                }
-            }
-
-            if (data.zoom_distance) {
-                if (!baseZoomDistance) {
-                    baseZoomDistance = data.zoom_distance;
-                }
-                let scaleFactor = data.zoom_distance / baseZoomDistance;
-                model.scale.set(scaleFactor, scaleFactor, scaleFactor);
-            }
-        };
-
-        ws.onopen = () => console.log("🟢 Conectado al WebSocket");
-        ws.onerror = (error) => console.error("🔴 Error en WebSocket:", error);
-        ws.onclose = () => console.log("🔴 WebSocket cerrado");
-
-        window.onload = init;
-    </script>
+    window.onload = init;
+  </script>
 </body>
 </html>
