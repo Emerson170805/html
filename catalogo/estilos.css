@@ -1,0 +1,95 @@
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #f1f1f1;
+    overflow: hidden;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.header-catalogo {
+    background-color: #ffffff;
+    padding: 12px 20px;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+}
+
+.titulo-catalogo {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #0d6efd;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.main-container {
+    height: 100vh;
+    padding-top: 65px;
+    box-sizing: border-box;
+}
+
+.hoja-a4 {
+    position: relative;
+    aspect-ratio: 210 / 297;
+    height: calc(100vh - 100px);
+    width: auto;
+    max-width: 90vw;
+    background-color: #fff;
+    overflow: hidden;
+    margin: 20px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.producto-btn {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 123, 255, 0.9);
+    color: #fff;
+    padding: 5px 10px;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    z-index: 10;
+    white-space: nowrap;
+    transition: all 0.2s ease-in-out;
+}
+
+.producto-btn:hover {
+    background-color: #0d6efd;
+    transform: translate(-50%, -50%) scale(1.05);
+}
+
+.carousel-control-prev,
+.carousel-control-next {
+    filter: drop-shadow(0 0 5px black);
+}
+
+.carrito-flotante {
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    border-radius: 50%;
+    width: 55px;
+    height: 55px;
+    font-size: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#contadorCarrito {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 12px;
+    padding: 4px 6px;
+    border-radius: 50%;
+}
