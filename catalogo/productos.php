@@ -35,6 +35,11 @@
                     </div>
                 </div>
 
+                <div class="mb-3">
+                    <label class="form-label">Descripción:</label>
+                    <textarea class="form-control" name="descripcion" rows="2"><?= $editarProducto['descripcion'] ?? '' ?></textarea>
+                </div>
+
                 <div class="row mb-3">
                     <div class="col">
                         <label class="form-label">Precio Mayor:</label>
@@ -76,6 +81,7 @@
                 <tr>
                     <th>ID</th>
                     <th>Nombre</th>
+                    <th>Descripción</th>
                     <th>Mayor</th>
                     <th>Menor</th>
                     <th>Stock</th>
@@ -93,6 +99,7 @@
                 <tr>
                     <td><?= $row['id'] ?></td>
                     <td><?= htmlspecialchars($row['nombre']) ?></td>
+                    <td><?= htmlspecialchars($row['descripcion']) ?></td>
                     <td><?= $row['precio_mayor'] ?></td>
                     <td><?= $row['precio_menor'] ?></td>
                     <td><?= $row['stock'] ?></td>

@@ -29,19 +29,19 @@ $productos = $conn->query("SELECT * FROM productos")->fetchAll(PDO::FETCH_ASSOC)
 <div class="main-container d-flex justify-content-center align-items-center">
     <?php if (count($hojas) > 0): ?>
         <div class="hoja-a4">
-            <div id="catalogoCarrusel" class="carousel slide h-100" data-bs-touch="true" data-bs-interval="false">
+            <div id="catalogoCarrusel" class="carousel slide carousel-fade h-100" data-bs-touch="true" data-bs-interval="false" data-bs-keyboard="true">
                 <div class="carousel-inner h-100">
                     <?php foreach ($hojas as $index => $hoja): ?>
                         <div class="carousel-item h-100 <?= $index === 0 ? 'active' : '' ?>">
                             <div class="w-100 h-100 position-relative">
-                                <img src="imagen.php?id=<?= htmlspecialchars($hoja['id']) ?>" alt="Hoja <?= htmlspecialchars($hoja['hoja']) ?>" class="img-fluid w-100 h-100">
+                                <img src="imagen.php?id=<?= htmlspecialchars($hoja['id']) ?>" alt="Hoja <?= htmlspecialchars($hoja['hoja']) ?>" class="imagen-hoja">
 
                                 <?php foreach ($productos as $producto): ?>
                                     <?php if ($producto['id_hoja'] == $hoja['id']): ?>
                                         <button class="producto-btn"
                                             style="left: <?= floatval($producto['horizontal']) ?>%; top: <?= floatval($producto['vertical']) ?>%;"
-                                            onclick="abrirModalProducto(<?= htmlspecialchars(json_encode($producto)) ?>)">
-                                            <?= htmlspecialchars($producto['nombre']) ?>
+                                            onclick='abrirModalProducto(<?= json_encode($producto, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>)'>
+                                            S/. <?= number_format($producto['precio_menor'], 2) ?>
                                         </button>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
@@ -68,7 +68,8 @@ $productos = $conn->query("SELECT * FROM productos")->fetchAll(PDO::FETCH_ASSOC)
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p id="modalDescripcionProducto"></p>
+                        <p><strong>Nombre:</strong> <span id="modalNombreProducto"></span></p>
+                        <p><strong>Descripción:</strong> <span id="modalDescripcionProducto"></span></p>
                         <p><strong>Precio:</strong> S/. <span id="modalPrecioProducto"></span></p>
                         <input type="number" id="modalCantidad" class="form-control" value="1" min="1">
                     </div>
@@ -89,6 +90,7 @@ $productos = $conn->query("SELECT * FROM productos")->fetchAll(PDO::FETCH_ASSOC)
             <div class="offcanvas-body">
                 <div id="contenidoCarrito"></div>
                 <hr>
+                <button class="btn btn-success w-100 mb-3" onclick="enviarWhatsapp()">Enviar a WhatsApp</button>
                 <p><strong>Total: S/. <span id="totalCarrito">0.00</span></strong></p>
             </div>
         </div>
@@ -104,6 +106,7 @@ $productos = $conn->query("SELECT * FROM productos")->fetchAll(PDO::FETCH_ASSOC)
     function abrirModalProducto(producto) {
         productoActual = producto;
         document.getElementById('modalProductoLabel').innerText = producto.nombre;
+        document.getElementById('modalNombreProducto').innerText = producto.nombre;
         document.getElementById('modalDescripcionProducto').innerText = producto.descripcion || "Sin descripción.";
         document.getElementById('modalPrecioProducto').innerText = parseFloat(producto.precio_menor).toFixed(2);
         document.getElementById('modalCantidad').value = 1;
@@ -167,6 +170,27 @@ $productos = $conn->query("SELECT * FROM productos")->fetchAll(PDO::FETCH_ASSOC)
     function mostrarCarrito() {
         new bootstrap.Offcanvas(document.getElementById('carritoCanvas')).show();
     }
+
+    function enviarWhatsapp() {
+        if (carrito.length === 0) {
+            alert('El carrito está vacío.');
+            return;
+        }
+    
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'prueba.php'; // <-- enviará los datos aquí
+    
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'carrito';
+        input.value = JSON.stringify(carrito);
+    
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit(); // <-- redireccionará con datos
+    }
+    
 
     document.addEventListener('keydown', e => {
         const carrusel = document.getElementById('catalogoCarrusel');

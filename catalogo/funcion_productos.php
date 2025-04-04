@@ -13,6 +13,7 @@ if ($conn->connect_error) {
 // AGREGAR
 if (isset($_POST['agregar'])) {
     $nombre = $_POST['nombre'];
+    $descripcion = $_POST['descripcion'];
     $precio_mayor = $_POST['precio_mayor'];
     $precio_menor = $_POST['precio_menor'];
     $stock = $_POST['stock'];
@@ -20,8 +21,8 @@ if (isset($_POST['agregar'])) {
     $vertical = $_POST['vertical'];
     $id_hoja = $_POST['id_hoja'];
 
-    $stmt = $conn->prepare("INSERT INTO productos (nombre, precio_mayor, precio_menor, stock, horizontal, vertical, id_hoja) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sddiidi", $nombre, $precio_mayor, $precio_menor, $stock, $horizontal, $vertical, $id_hoja);
+    $stmt = $conn->prepare("INSERT INTO productos (nombre, descripcion, precio_mayor, precio_menor, stock, horizontal, vertical, id_hoja) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssddiidi", $nombre, $descripcion, $precio_mayor, $precio_menor, $stock, $horizontal, $vertical, $id_hoja);
     $stmt->execute();
     header("Location: productos.php");
     exit();
@@ -31,6 +32,7 @@ if (isset($_POST['agregar'])) {
 if (isset($_POST['editar'])) {
     $id = $_POST['id'];
     $nombre = $_POST['nombre'];
+    $descripcion = $_POST['descripcion'];
     $precio_mayor = $_POST['precio_mayor'];
     $precio_menor = $_POST['precio_menor'];
     $stock = $_POST['stock'];
@@ -38,8 +40,8 @@ if (isset($_POST['editar'])) {
     $vertical = $_POST['vertical'];
     $id_hoja = $_POST['id_hoja'];
 
-    $stmt = $conn->prepare("UPDATE productos SET nombre=?, precio_mayor=?, precio_menor=?, stock=?, horizontal=?, vertical=?, id_hoja=? WHERE id=?");
-    $stmt->bind_param("sddiidii", $nombre, $precio_mayor, $precio_menor, $stock, $horizontal, $vertical, $id_hoja, $id);
+    $stmt = $conn->prepare("UPDATE productos SET nombre=?, descripcion=?, precio_mayor=?, precio_menor=?, stock=?, horizontal=?, vertical=?, id_hoja=? WHERE id=?");
+    $stmt->bind_param("ssddiidii", $nombre, $descripcion, $precio_mayor, $precio_menor, $stock, $horizontal, $vertical, $id_hoja, $id);
     $stmt->execute();
     header("Location: productos.php");
     exit();
