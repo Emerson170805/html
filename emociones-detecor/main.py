@@ -9,7 +9,7 @@ def main():
     etiquetas = ['feliz', 'neutral', 'sorprendido', 'triste']
 
     # VA A UTILIZAR LA CAMARA 2
-    cap = cv2.VideoCapture(2)
+    cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         print("❌ No se pudo abrir la cámara.")
         return
