@@ -1,99 +1,111 @@
 import cv2
 import mediapipe as mp
 import joblib
+import numpy as np
 import sys
 
-# Cargar modelo
+def normalize_landmarks(landmarks):
+    """Normaliza los landmarks para hacerlos invariantes a posición y tamaño"""
+    landmarks = np.array(landmarks).reshape(-1, 3)
+    wrist = landmarks[0]  # Usamos la muñeca como punto de referencia
+    landmarks -= wrist  # Centramos los puntos
+    max_value = np.max(np.abs(landmarks))
+    if max_value != 0:
+        landmarks /= max_value  # Normalizamos a [-1, 1]
+    return landmarks.flatten().tolist()
+
+# Cargar modelo y label encoder
 try:
-    model = joblib.load('model/gesture_knn.pkl')
-    print("✅ Modelo cargado correctamente")
+    model = joblib.load('model/gesture_svm.pkl')
+    le = joblib.load('model/label_encoder.pkl')
+    print("✅ Modelo y encoder cargados correctamente")
 except Exception as e:
-    print("❌ Error al cargar el modelo:", e)
+    print(f"❌ Error al cargar los modelos: {e}")
     sys.exit(1)
 
-# Configurar MediaPipe
+# Configurar MediaPipe Hands
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=1,
-    min_detection_confidence=0.5,
+    min_detection_confidence=0.7,
     min_tracking_confidence=0.5
 )
 mp_draw = mp.solutions.drawing_utils
 
-def mostrar_camara():
-    # Intentar con diferentes índices de cámara
-    for camera_index in [2]:
-        cap = cv2.VideoCapture(camera_index)
+def initialize_camera(camera_index=0):
+    """Intenta inicializar la cámara con diferentes índices"""
+    for index in [camera_index, 1, 2, 3]:  # Prueba diferentes índices
+        cap = cv2.VideoCapture(index)
         if cap.isOpened():
-            print(f"📷 Cámara encontrada en índice {camera_index}")
-            break
-    else:
-        print("❌ No se pudo encontrar ninguna cámara disponible")
-        return False
+            print(f"📷 Cámara encontrada en índice {index}")
+            return cap
+    return None
+
+def main():
+    cap = initialize_camera(2)  # Cambia este número según tu cámara
+    if not cap:
+        print("❌ No se pudo inicializar ninguna cámara")
+        return
 
     while True:
         try:
             ret, frame = cap.read()
             if not ret:
                 print("⚠️ Error leyendo el frame. Reintentando...")
-                # Intentar reconectar la cámara
                 cap.release()
-                cap = cv2.VideoCapture(camera_index)
+                cap = initialize_camera()
+                if not cap:
+                    break
                 continue
 
-            # Procesamiento de imagen
-            frame = cv2.flip(frame, 1)  # Voltear horizontalmente para efecto espejo
+            # Procesamiento de la imagen
+            frame = cv2.flip(frame, 1)  # Efecto espejo
             img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             result = hands.process(img_rgb)
 
             if result.multi_hand_landmarks:
                 for handLms in result.multi_hand_landmarks:
+                    # Dibujar landmarks
                     mp_draw.draw_landmarks(frame, handLms, mp_hands.HAND_CONNECTIONS)
-                    landmarks = [coord for lm in handLms.landmark for coord in (lm.x, lm.y, lm.z)]
                     
-                    if len(landmarks) == 63:  # 21 landmarks * 3 coordenadas
+                    # Extraer y normalizar landmarks
+                    landmarks = [coord for lm in handLms.landmark for coord in (lm.x, lm.y, lm.z)]
+                    if len(landmarks) == 63:  # 21 landmarks × 3 coordenadas
                         try:
-                            pred = model.predict([landmarks])[0]
-                            cv2.putText(frame, f'Gesto: {pred}', (10, 50), 
+                            norm_landmarks = normalize_landmarks(landmarks)
+                            pred = model.predict([norm_landmarks])[0]
+                            label = le.inverse_transform([pred])[0]
+                            
+                            # Mostrar predicción
+                            cv2.putText(frame, f'Gesto: {label}', (10, 50),
                                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2,
                                        cv2.LINE_AA)
                         except Exception as e:
                             print(f"⚠️ Error en predicción: {e}")
 
+            # Mostrar frame
             cv2.imshow("Reconocimiento de Gestos", frame)
 
             # Control de salida
-            key = cv2.waitKey(1)
-            if key == 27:  # Tecla ESC
+            key = cv2.waitKey(10)
+            if key == 27:  # ESC para salir
                 print("🛑 Programa terminado por el usuario")
-                cap.release()
-                cv2.destroyAllWindows()
-                return True
-            elif key == ord('r'):  # Tecla R para reiniciar
+                break
+            elif key == ord('r'):  # R para reiniciar
                 print("🔄 Reiniciando cámara...")
                 cap.release()
-                cv2.destroyAllWindows()
-                return False
-
-            # Verificar si la ventana fue cerrada
-            if cv2.getWindowProperty("Reconocimiento de Gestos", cv2.WND_PROP_VISIBLE) < 1:
-                print("🔄 Ventana cerrada. Reiniciando...")
-                cap.release()
-                cv2.destroyAllWindows()
-                return False
+                cap = initialize_camera()
+                if not cap:
+                    break
 
         except Exception as e:
             print(f"⚠️ Error inesperado: {e}")
-            cap.release()
-            cv2.destroyAllWindows()
-            return False
+            break
 
-# Bucle principal
-while True:
-    print("\nIniciando sistema de reconocimiento...")
-    salir = mostrar_camara()
-    if salir:
-        break
-    print("Reiniciando en 2 segundos...")
-    cv2.waitKey(2000)  # Pequeña pausa antes de reiniciar
+    # Liberar recursos
+    cap.release()
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
