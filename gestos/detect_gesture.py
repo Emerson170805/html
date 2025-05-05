@@ -35,7 +35,7 @@ mp_draw = mp.solutions.drawing_utils
 
 def initialize_camera(camera_index=0):
     """Intenta inicializar la cámara con diferentes índices"""
-    for index in [camera_index, 1, 2, 3]:  # Prueba diferentes índices
+    for index in [camera_index, 0, 2, 3]:  # Prueba diferentes índices
         cap = cv2.VideoCapture(index)
         if cap.isOpened():
             print(f"📷 Cámara encontrada en índice {index}")
@@ -79,7 +79,7 @@ def main():
                             
                             # Mostrar predicción
                             cv2.putText(frame, f'Gesto: {label}', (10, 50),
-                                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2,
+                                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2,
                                        cv2.LINE_AA)
                         except Exception as e:
                             print(f"⚠️ Error en predicción: {e}")
