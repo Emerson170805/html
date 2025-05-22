@@ -1,14 +1,24 @@
 # ---------------------------------------------
 # 3. Red Recurrente Simple (RNN) para secuencias
 # ---------------------------------------------
-from tensorflow.keras.layers import SimpleRNN
+import numpy as np
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import SimpleRNN, Dense
 
+# Modelo RNN secuencial
 model_rnn = Sequential([
     SimpleRNN(32, input_shape=(10, 1)),
     Dense(1)
 ])
+
 model_rnn.compile(optimizer='adam', loss='mse')
+
+# Datos simulados: 100 ejemplos, secuencias de 10 pasos con 1 valor por paso
 x_rnn = np.random.rand(100, 10, 1)
 y_rnn = np.random.rand(100, 1)
+
+# Entrenamiento
 model_rnn.fit(x_rnn, y_rnn, epochs=5, verbose=0)
+
+# Predicción de una muestra
 print("RNN predicción para una muestra:", model_rnn.predict(x_rnn[:1])[0][0])
