@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 5
+names: ['feliz', 'normal', 'raiva', 'surpreso', 'triste']
+
+roboflow:
+  workspace: facial-expression-recognition-d8apz
+  project: facial-expression-non-english
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/facial-expression-recognition-d8apz/facial-expression-non-english/dataset/1
