@@ -3,7 +3,18 @@ import numpy as np
 import tensorflow as tf
 import mediapipe as mp
 
+# Configurar TensorFlow para que use la GPU con crecimiento de memoria limitado
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
+
 def main():
+    print("GPUs disponibles:", tf.config.list_physical_devices('GPU'))
+
     modelo = tf.keras.models.load_model('modelo_emociones.h5')
     etiquetas = ['feliz', 'neutral', 'sorprendido', 'triste']
 
@@ -13,7 +24,11 @@ def main():
         return
 
     mp_face_mesh = mp.solutions.face_mesh
-    face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=5, min_detection_confidence=0.5)
+    face_mesh = mp_face_mesh.FaceMesh(
+        static_image_mode=False,
+        max_num_faces=10,  # Detectar hasta 10 rostros
+        min_detection_confidence=0.5
+    )
 
     try:
         while True:
@@ -44,13 +59,11 @@ def main():
                     pred = modelo.predict(entrada, verbose=0)
                     emocion = etiquetas[np.argmax(pred)]
 
-                    # Ya no dibujamos la malla facial
-
                     cv2.putText(frame, emocion, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
 
             cv2.imshow("Detector de emociones", frame)
-            if cv2.waitKey(1) & 0xFF == 27:
+            if cv2.waitKey(1) & 0xFF == 27:  # Tecla ESC para salir
                 break
     finally:
         cap.release()
